@@ -70,160 +70,63 @@ else
   [ $f_cont -eq 1 ] && rb_set_samzacontainers.rb -c $containers
   [ $f_mem -eq 1 ] && rb_set_samzacontainersmemory.rb -m $memory
   [ $f_show -eq 1 ] && rb_set_samzacontainers.rb -s && rb_set_samzacontainersmemory.rb -s
+
+
+  ## Kill apps if -k option is set ###########################################################
   if [ $f_kill -eq 1 ]; then
-    if [ "x$f_type" == "xenrichment" ] || [ "x$f_type" == "xall" ]; then
-      application="$($HADOOP_BIN/yarn application -list | grep enrichment | awk '{print $1}')"
-      running="x$application";
-      if [ $running != "x" ]; then
-        $HADOOP_BIN/yarn application -kill $application &>/dev/null
-        echo "Killed application $application (enrichment)"
-      else
-        echo "The enrichment application was not running"
-      fi
+    if [ "x$f_type" == "xall" ] ; then
+      kill_app_types="enrichment location indexing malware pms iot"
+    else
+      kill_app_types="$f_type"
     fi
 
-    if [ "x$f_type" == "xlocation" ] || [ "x$f_type" == "xall" ]; then
-      application="$($HADOOP_BIN/yarn application -list | grep location | awk '{print $1}')"
-      running="x$application";
-      if [ $running != "x" ]; then
-        $HADOOP_BIN/yarn application -kill $application &>/dev/null
-        echo "Killed application $application (location)"
-      else
-        echo "The location application was not running"
-      fi
-    fi
-
-    if [ "x$f_type" == "xindexing" ] || [ "x$f_type" == "xall" ]; then
-      application="$($HADOOP_BIN/yarn application -list | grep indexing | awk '{print $1}')"
-      running="x$application";
-      if [ $running != "x" ]; then
-        $HADOOP_BIN/yarn application -kill $application &>/dev/null
-        echo "Killed application $application (indexing)"
-      else
-        echo "The indexing application was not running"
-      fi
-    fi
-
-    if [ "x$f_type" == "xmalware" ] || [ "x$f_type" == "xall" ]; then
-      application="$($HADOOP_BIN/yarn application -list | grep samza-malware | awk '{print $1}')"
-      running="x$application";
-      if [ $running != "x" ]; then
-        $HADOOP_BIN/yarn application -kill $application &>/dev/null
-        echo "Killed application $application (malware)"
-      else
-        echo "The malware application was not running"
-      fi
-    fi
-
-    if [ "x$f_type" == "xpms" ] || [ "x$f_type" == "xall" ]; then
-      application="$($HADOOP_BIN/yarn application -list | grep pms | awk '{print $1}')"
-      running="x$application";
-      if [ $running != "x" ]; then
-        $HADOOP_BIN/yarn application -kill $application &>/dev/null
-        echo "Killed application $application (pms)"
-      else
-        echo "The pms application was not running"
-      fi
-    fi
-
-    if [ "x$f_type" == "xiot" ] || [ "x$f_type" == "xall" ]; then
-      application="$($HADOOP_BIN/yarn application -list | grep iot | awk '{print $1}')"
-      running="x$application";
-      if [ $running != "x" ]; then
-        $HADOOP_BIN/yarn application -kill $application &>/dev/null
-        echo "Killed application $application (iot)"
-      else
-        echo "The iot application was not running"
-      fi
-    fi
+    for app_type in $kill_app_types ; do
+      application="$($HADOOP_BIN/yarn application -list | grep $app_type | awk '{print $1}')"
+      for n in $application ; do
+        $HADOOP_BIN/yarn application -kill $n &>/dev/null
+        echo "Killed application $n ($app_type)"
+      done
+    done    
   fi
+  ################################################################################################
 
+  ## List apps if -l option is set ###############################################################
   if [ $f_list -eq 1 ]; then
      timeout 60 $HADOOP_BIN/yarn application -list | egrep "(Samza|Application-Id)"
   fi
+  ################################################################################################
 
+  ## Execute apps if -e option is set ############################################################
   if [ $f_execute -eq 1 ]; then
-    if [ "x$f_type" == "xiot" ]; then
 
-      rm -rf $SAMZA_DIR/rb-samza-iot/bin/*
-      rm -rf $SAMZA_DIR/rb-samza-iot/lib/*
-      tar xfz $SAMZA_DIR/rb-samza-iot/app/rb-samza-iot.tar.gz -C $SAMZA_DIR/rb-samza-iot
-
-      application="$($HADOOP_BIN/yarn application -list | grep iot | awk '{print $1}')"
-      running="x$application";
-      if [ $running == "x" ]; then
-         $SAMZA_DIR/rb-samza-iot/bin/run-job.sh --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory --config-path=file:$SAMZA_DIR/rb-samza-iot/config/iot.properties
-      else
-        echo "Application $application (iot) is already running."
-      fi
-
-   elif [ "x$f_type" == "xpms" ]; then
-
-      rm -rf $SAMZA_DIR/rb-samza-pms/bin/*
-      rm -rf $SAMZA_DIR/rb-samza-pms/lib/*
-      tar xfz $SAMZA_DIR/rb-samza-pms/app/rb-samza-pms.tar.gz -C $SAMZA_DIR/rb-samza-pms
-
-      application="$($HADOOP_BIN/yarn application -list | grep pms | awk '{print $1}')"
-      running="x$application";
-      if [ $running == "x" ]; then
-         $SAMZA_DIR/rb-samza-pms/bin/run-job.sh --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory --config-path=file:$SAMZA_DIR/rb-samza-pms/config/pms.properties
-      else
-        echo "Application $application (pms) is already running."
-      fi
-
-   elif [ "x$f_type" == "xmalware" ]; then
-
-      rm -rf $SAMZA_DIR/rb-samza-malware/bin/*
-      rm -rf $SAMZA_DIR/rb-samza-malware/lib/*
-      tar xfz $SAMZA_DIR/rb-samza-malware/app/rb-samza-malware.tar.gz -C $SAMZA_DIR/rb-samza-malware
-
-      application="$($HADOOP_BIN/yarn application -list | grep samza-malware | awk '{print $1}')"
-      running="x$application";
-      if [ $running == "x" ]; then
-         $SAMZA_DIR/rb-samza-malware/bin/run-job.sh --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory --config-path=file:$SAMZA_DIR/rb-samza-malware/config/malware.properties
-      else
-        echo "Application $application (malware) is already running."
-      fi
-
-   else
-      rm -rf $SAMZA_DIR/rb-samza-bi/bin/*
-      rm -rf $SAMZA_DIR/rb-samza-bi/lib/*
-      tar xfz $SAMZA_DIR/rb-samza-bi/app/rb-samza-bi.tar.gz -C $SAMZA_DIR/rb-samza-bi
-
-      if [ "x$f_type" == "xenrichment" ] || [ "x$f_type" == "xall" ]; then
-        application="$($HADOOP_BIN/yarn application -list | grep enrichment | awk '{print $1}')"
-        running="x$application";
-        if [ $running == "x" ]; then
-           $SAMZA_DIR/rb-samza-bi/bin/run-job.sh --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory --config-path=file:$SAMZA_DIR/rb-samza-bi/config/enrichment.properties
-        else
-          echo "Application $application (enrichment) is already running."
-        fi
-      fi
-
-      if [ "x$f_type" == "xlocation" ] || [ "x$f_type" == "xall" ]; then
-        rm -rf $SAMZA_DIR/rb-samza-location/bin/*
-        rm -rf $SAMZA_DIR/rb-samza-location/lib/*
-        tar xfz $SAMZA_DIR/rb-samza-location/app/rb-samza-location.tar.gz -C $SAMZA_DIR/rb-samza-location
-
-        application="$($HADOOP_BIN/yarn application -list | grep location | awk '{print $1}')"
-        running="x$application";
-        if [ $running == "x" ]; then
-           $SAMZA_DIR/rb-samza-location/bin/run-job.sh --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory --config-path=file:$SAMZA_DIR/rb-samza-location/config/location.properties
-        else
-          echo "Application $application (location) is already running."
-        fi
-      fi
-
-      if [ "x$f_type" == "xindexing" ] || [ "x$f_type" == "xall" ]; then
-        application="$($HADOOP_BIN/yarn application -list | grep indexing | awk '{print $1}')"
-        running="x$application";
-        if [ $running == "x" ]; then
-           $SAMZA_DIR/rb-samza-bi/bin/run-job.sh --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory --config-path=file:$SAMZA_DIR/rb-samza-bi/config/indexing.properties
-        else
-          echo "Application $application (indexing) is already running."
-        fi
-      fi
+    if [ "x$f_type" == "xall" ] ; then
+      exec_app_types="enrichment location indexing"
+    else
+      exec_app_types="$f_type"
     fi
+    
+    for app_type in $exec_app_types ; do
+
+      if [ "x$app_type" == "xenrichment" -o "x$app_type" == "xindexing" ] ; then
+        package_name="rb-samza-bi"
+      else
+        package_name="rb-samza-$app_type"
+      fi
+
+      rm -rf ${SAMZA_DIR}/${package_name}/bin/*
+      rm -rf ${SAMZA_DIR}/${package_name}/lib/*
+      tar xfz ${SAMZA_DIR}/${package_name}/app/${package_name}.tar.gz -C ${SAMZA_DIR}/${package_name}
+
+      application="$($HADOOP_BIN/yarn application -list | grep $app_type | awk '{print $1}')"
+      if [ $? -eq 0 -a "x$application" == "x" ] ; then
+        ${SAMZA_DIR}/${package_name}/bin/run-job.sh \
+          --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory \
+          --config-path=file:$SAMZA_DIR/${package_name}/config/$app_type.properties
+      else
+        echo "Application $application ($app_type) is already running."
+      fi
+
+    done
   fi
 
 fi
