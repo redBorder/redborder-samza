@@ -116,15 +116,19 @@ else
       rm -rf ${SAMZA_DIR}/${package_name}/bin/*
       rm -rf ${SAMZA_DIR}/${package_name}/lib/*
       tar xfz ${SAMZA_DIR}/${package_name}/app/${package_name}.tar.gz -C ${SAMZA_DIR}/${package_name}
-
-      application="$($HADOOP_BIN/yarn application -list | grep $app_type | awk '{print $1}')"
-      if [ $? -eq 0 -a "x$application" == "x" ] ; then
-        ${SAMZA_DIR}/${package_name}/bin/run-job.sh \
-          --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory \
-          --config-path=file:$SAMZA_DIR/${package_name}/config/$app_type.properties
-      else
-        echo "Application $application ($app_type) is already running."
+      
+      application_list="$($HADOOP_BIN/yarn application -list)"
+      if [ $? -eq 0 ] ; then
+        application="$(echo "$application_list" | grep $app_type | awk '{print $1}')"
+        if [ "x$application" == "x" ] ; then
+          ${SAMZA_DIR}/${package_name}/bin/run-job.sh \
+            --config-factory=org.apache.samza.config.factories.PropertiesConfigFactory \
+            --config-path=file:$SAMZA_DIR/${package_name}/config/$app_type.properties
+        else
+          echo "Application $application ($app_type) is already running."
+        fi
       fi
+
 
     done
   fi
